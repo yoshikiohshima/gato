@@ -28,7 +28,7 @@ class Sphero(object):
         self.path = path
 
     def paired_spheros(self):
-        return glob.glob('/dev/tty.Sphero*')
+        return glob.glob('/dev/rfcomm0')#tty.Sphero*')
 
     def connect(self, retry=100):
         tries=retry
@@ -62,7 +62,7 @@ class Sphero(object):
 
     def prep_str(self, s):
         """ Helper method to take a string and give a array of "bytes" """
-        return [ord(c) for c in s]    
+        return [ord(c) for c in s]
 
     # CORE COMMANDS
 
@@ -79,7 +79,7 @@ class Sphero(object):
         raise NotImplementedError
 
     def get_device_name(self):
-        # GET_DEVICE_NAME is not really part of the api, 
+        # GET_DEVICE_NAME is not really part of the api,
         # it has changed to GET_BLUETOOTH_INFO.
         # Which returns both name and Bluetooth mac address.
         return self.get_bluetooth_info().name
@@ -181,9 +181,9 @@ class Sphero(object):
 
     def roll(self, speed, heading, state=1):
         """
-        speed can have value between 0x00 and 0xFF 
-        heading can have value between 0 and 359 
-        
+        speed can have value between 0x00 and 0xFF
+        heading can have value between 0 and 359
+
         """
         return self.write(request.Roll(self.seq, speed, heading, state ))
 
@@ -259,7 +259,7 @@ class Sphero(object):
         raise NotImplementedError
 
     # Additional "higher-level" commands
-    
+
     def stop(self):
         return self.roll(0,0)
 
@@ -271,13 +271,13 @@ if __name__ == '__main__':
 
     #print ( s.set_device_name("Sphero-Salmon") )
 
-    print( """Bluetooth info: 
+    print( """Bluetooth info:
         name: %s
         bta: %s
-        """ 
-        % ( s.get_bluetooth_info().name, 
+        """
+        % ( s.get_bluetooth_info().name,
             s.get_bluetooth_info().bta
-          ) 
+          )
     )
 
     s.set_rotation_rate(0x00)
@@ -290,7 +290,7 @@ if __name__ == '__main__':
     s.stop()
 
 
-    
+
 
     # handy for debugging calls
     def raw(did, cid, *data, **kwargs):
