@@ -1,0 +1,61 @@
+I'm using OS X 10.11.4 and the built-in python (2.7.10) located at /usr/bin/python.
+
+- Install XCode and its command line tools
+
+- Install numpy (sudo pip install numpy)
+
+- Make sure various libraries/packages are installed (manually or via macports or brew).
+  - cmake, pkg-config
+  - (optional?) jpeg libpng libtiff openexr eigen tbb
+  - (optional?) ffmpeg for libav... and libsw..., etc.
+
+- Get the OpenCV source:
+
+  - git clone https://github.com/Itseez/opencv.git
+  - cd opencv
+  - git checkout 2.4.12.3
+
+  (I couldn't get opencv 3.x working because of python compatability issues)
+
+- Build OpenCV:
+  (In the opencv directory...)
+  
+  - At the top of of CMakeLists.txt, add:
+
+    list(APPEND CMAKE_LIBRARY_PATH /opt/local/lib)
+    list(APPEND CMAKE_INCLUDE_PATH /opt/local/include)
+
+    ...if needed, so that cmake can find the macports-installed
+    libraries.
+
+  - mkdir build
+  - cd build
+  - run:
+
+    cmake \
+      -D CMAKE_BUILD_TYPE=RELEASE \
+      -D CMAKE_INSTALL_PREFIX=/usr/local \
+      -D BUILD_SHARED_LIBS=OFF \
+      -D PYTHON_PACKAGES_PATH=/Library/Python/2.7/site-packages \
+      -D PYTHON_LIBRARY=/System/Library/Frameworks/Python.framework/Versions/2.7/bin \
+      -D PYTHON_INCLUDE_DIR=/System/Library/Frameworks/Python.framework/Headers \
+      ..
+    
+    Adjust as needed. (Optional) To build and install examples, too, add:
+
+      -D BUILD_EXAMPLES=YES \
+      -D INSTALL_C_EXAMPLES=ON \
+      -D INSTALL_PYTHON_EXAMPLES=ON \
+
+  - make (or make -j4 to parallelize)
+  - sudo make install
+
+- Try it out:
+
+  $ python
+  >>> import cv2
+  >>>
+
+References (each was only partially useful):
+  - http://blogs.wcode.org/2014/10/howto-install-build-and-use-opencv-macosx-10-10/
+  - http://www.pyimagesearch.com/2015/06/15/install-opencv-3-0-and-python-2-7-on-osx/
