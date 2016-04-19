@@ -36,6 +36,7 @@ I'm using OS X 10.11.4 and the built-in python (2.7.10) located at /usr/bin/pyth
       -D CMAKE_BUILD_TYPE=RELEASE \
       -D CMAKE_INSTALL_PREFIX=/usr/local \
       -D BUILD_SHARED_LIBS=OFF \
+      -D PYTHON_EXECUTABLE=/usr/bin/python \
       -D PYTHON_PACKAGES_PATH=/Library/Python/2.7/site-packages \
       -D PYTHON_LIBRARY=/System/Library/Frameworks/Python.framework/Versions/2.7/bin \
       -D PYTHON_INCLUDE_DIR=/System/Library/Frameworks/Python.framework/Headers \
