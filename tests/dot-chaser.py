@@ -8,10 +8,17 @@ import video
 
 import sphero
 
-s = sphero.Sphero()
+s = None
+
+lastDirs = [0]
+lastPositions = [[0, 0]]
 
 def connect():
-    print("connect sphero")
+    if not s:
+        print 'sphero variable is not initialized'
+        return
+
+    print("connecting to sphero")
     try:
         s.connect()
     except:
@@ -21,11 +28,76 @@ def connect():
     print( """Bluetooth info:name: %s \nbta: %s """ %
            (s.get_bluetooth_info().name, s.get_bluetooth_info().bta))
 
+def wrap(degrees):
+    if degrees >= 360:
+        return degrees - int(int(degrees) / 360) * 360
+    if degrees < 0:
+        return degrees + int(int(degrees) / 360) * -360
+    return degrees
+
+def dir(newPos, oldPos):
+   newX = newPos[0]
+   newY = newPos[1]
+   oldX = oldPos[0]
+   oldY = oldPos[1]
+
+   diffX = newX - oldX
+   diffY = newY - oldY
+
+   rad = np.arctan2(diffX, diffY)
+   return wrap(rad * 180.0 / np.pi)
+
+def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
+    if not s:
+        return
+
+    print 'step', tx, ty, lastDirs, dotx, doty, lastPositions
+
+    if (abs(tx - dotx) < 50) and (abs(ty - doty) < 50):
+        return
+
+    if len(lastDirs) < 10:
+        print 'early', lastDirs[-1]
+        s.roll(0x0F, lastDirs[-1])
+        lastDirs.append(lastDirs[-1])
+        lastPositions.append([dotx, doty])
+        return
+
+    lastPositions.pop(0)
+    lastDirs.pop(0)
+
+    d = dir(lastPositions[-1], lastPositions[0])
+    # the direction sphero moved in last 10 steps within the camera frame
+
+    sd = wrap(sum(lastDirs) / len(lastDirs))
+    # the direction that sphero thinks it went in last 10 frames
+
+    cd = dir([dotx, doty], [tx, ty])
+    # the direction sphero needs to go in the camera frame
+
+    diff = d - cd
+    if (diff > 180):
+        next = wrap(lastDirs[-1] + 10)
+    else:
+        next = wrap(lastDirs[-1] - 10)
+
+    print 'after', d, sd, cd, diff, next
+    s.roll(0x0F, next)
+    lastPositions.append([dotx, doty])
+    lastDirs.append(next)
 
 if __name__ == '__main__':
 
     try: fn = sys.argv[1]
     except: fn = 0
+
+    try: noSphero = sys.argv[2]
+    except: noSphero = ''
+
+    doSphero = not noSphero
+
+    if doSphero:
+        s = sphero.Sphero()
 
     connect()
 
@@ -49,8 +121,6 @@ if __name__ == '__main__':
     prod = np.zeros(values.shape, np.int64)
     dot = np.zeros(values.shape, values.dtype)
 
-    print xcord, ycord
-
     while True:
         flag, frame = cam.read()
         small = cv2.pyrDown(frame)
@@ -72,8 +142,6 @@ if __name__ == '__main__':
             np.multiply(ycord, bright, prod)
             cy = (np.sum(prod) / count) + (values.shape[1] / 2)
 
-            print 'center', cx, cy
-
             dot.fill(0)
             dot[cx-1, cy-1] = 255
             dot[cx, cy-1] = 255
@@ -86,16 +154,7 @@ if __name__ == '__main__':
             dot[cx+1, cy+1] = 255
             cv2.imshow('dot', dot)
 
-        if (abs(cx - (bright.shape[0] / 2)) > 50):
-            if (cx < (bright.shape[0] / 2)):
-                s.roll(0x0F, 270)
-            else:
-                s.roll(0x0F, 90)
-        elif (abs(cy - (bright.shape[1] / 2)) > 50):
-                if (cy < (bright.shape[1] / 2)):
-                    s.roll(0x0F, 0)
-                else:
-                    s.roll(0x0F, 180)
+        spheroStep(s, bright.shape[0] / 2, bright.shape[1] / 2, lastDirs, cx, cy, lastPositions)
             
         ch = 0xFF & cv2.waitKey(1)
         if ch == 27:
