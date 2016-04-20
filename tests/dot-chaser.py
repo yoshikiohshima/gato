@@ -6,9 +6,9 @@ from time import clock
 import sys
 import video
 
-import sphero
+#import sphero
 
-s = sphero.Sphero()
+#s = sphero.Sphero()
 
 def connect():
     print("connect sphero")
@@ -27,7 +27,10 @@ if __name__ == '__main__':
     try: fn = sys.argv[1]
     except: fn = 0
 
-    connect()
+#    connect()
+
+#    cam = cv2.VideoCapture(fn)
+#    By reading video.py, the line above should be equivalent to the line below;  but somehow it does not create a valid camera object
 
     cam = video.create_capture(fn, fallback='synth:bg=../cpp/baboon.jpg:class=chess:noise=0.05')
 
@@ -47,6 +50,7 @@ if __name__ == '__main__':
 
         mask = (values > 240)
         bright[mask] = 255
+        cv2.imshow('bright', bright)
 
         sumx = 0
         sumy = 0
@@ -57,38 +61,35 @@ if __name__ == '__main__':
                 sumy += y
                 count += 1
 
-        cx = sumx / count
-        cy = sumy / count
+        if count > 0:
+            cx = sumx / count
+            cy = sumy / count
 
-        print 'center', cx, cy
+            print 'center', cx, cy
+            dot = np.copy(values)
+            dot.fill(0)
 
-        cv2.imshow('bright', bright)
-        
-        dot = np.copy(values)
-        dot.fill(0)
+            dot[cx-1, cy-1] = 255
+            dot[cx, cy-1] = 255
+            dot[cx+1, cy-1] = 255
+            dot[cx-1, cy] = 255
+            dot[cx, cy] = 255
+            dot[cx+1, cy] = 255
+            dot[cx-1, cy+1] = 255
+            dot[cx, cy+1] = 255
+            dot[cx+1, cy+1] = 255
+            cv2.imshow('dot', dot)
 
-        dot[cx-1, cy-1] = 255
-        dot[cx, cy-1] = 255
-        dot[cx+1, cy-1] = 255
-        dot[cx-1, cy] = 255
-        dot[cx, cy] = 255
-        dot[cx+1, cy] = 255
-        dot[cx-1, cy+1] = 255
-        dot[cx, cy+1] = 255
-        dot[cx+1, cy+1] = 255
-        cv2.imshow('dot', dot)
-
-        
-        if (abs(cx - (bright.shape[0] / 2)) > 50):
-            if (cx < (bright.shape[0] / 2)):
-                s.roll(0x0F, 270)
-            else:
-                s.roll(0x0F, 90)
-        elif (abs(cy - (bright.shape[1] / 2)) > 50):
-                if (cy < (bright.shape[1] / 2)):
-                    s.roll(0x0F, 0)
-                else:
-                    s.roll(0x0F, 180)
+        # if (abs(cx - (bright.shape[0] / 2)) > 50):
+        #     if (cx < (bright.shape[0] / 2)):
+        #         s.roll(0x0F, 270)
+        #     else:
+        #         s.roll(0x0F, 90)
+        # elif (abs(cy - (bright.shape[1] / 2)) > 50):
+        #         if (cy < (bright.shape[1] / 2)):
+        #             s.roll(0x0F, 0)
+        #         else:
+        #             s.roll(0x0F, 180)
             
         ch = 0xFF & cv2.waitKey(1)
         if ch == 27:
