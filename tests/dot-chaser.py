@@ -115,22 +115,17 @@ if __name__ == '__main__':
     # we are still creating new arrays for 'small' and 'values' in the loop.
 
     xcord, ycord = np.indices(values.shape)
-    xcord = np.subtract(xcord, (values.shape[0] / 2))
-    ycord = np.subtract(ycord, (values.shape[1] / 2))
     bright = np.zeros(values.shape, values.dtype)
     prod = np.zeros(values.shape, np.int64)
-    dot = np.zeros(values.shape, values.dtype)
     overlaid = np.zeros(small.shape, small.dtype)
+    red = [0,0,255]
 
     while True:
         flag, frame = cam.read()
         small = cv2.pyrDown(frame)
 
-	cv2.imshow('rgb', small)
-
         cv2.cvtColor(small, cv2.COLOR_BGR2HSV, hsv)
         values = hsv[:,:,2]
-
 
         cv2.imshow('hsv', values)
 
@@ -142,17 +137,12 @@ if __name__ == '__main__':
 	for i in range(3):
 	    overlaid[:,:,i] = bright * 255
 
-        cv2.imshow('bright', np.multiply(bright, 255))
-
-        if small.shape[0] > 0:  # meaning that this is a valid frame
+        if count > 0:  # meaning that this is a valid frame
             np.multiply(xcord, bright, prod)
-            cx = (np.sum(prod) / count) + (values.shape[0] / 2)
+            cx = np.sum(prod) / count
             np.multiply(ycord, bright, prod)
-            cy = (np.sum(prod) / count) + (values.shape[1] / 2)
+            cy = np.sum(prod) / count
             
-            red = [0,0,255]
-
-            #dot.fill(0)
             overlaid[cx-1:cx+1,cy-1,:] = red
             overlaid[cx-1:cx+1,cy,:] = red
             overlaid[cx-1:cx+1,cy+1,:] = red
