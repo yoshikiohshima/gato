@@ -120,12 +120,17 @@ if __name__ == '__main__':
     bright = np.zeros(values.shape, values.dtype)
     prod = np.zeros(values.shape, np.int64)
     dot = np.zeros(values.shape, values.dtype)
+    overlaid = np.zeros(small.shape, small.dtype)
 
     while True:
         flag, frame = cam.read()
         small = cv2.pyrDown(frame)
+
+	cv2.imshow('rgb', small)
+
         cv2.cvtColor(small, cv2.COLOR_BGR2HSV, hsv)
         values = hsv[:,:,2]
+
 
         cv2.imshow('hsv', values)
 
@@ -133,6 +138,9 @@ if __name__ == '__main__':
         mask = (values > 240)
         bright[mask] = 1
         count = np.sum(mask)
+	
+	for i in range(3):
+	    overlaid[:,:,i] = bright * 255
 
         cv2.imshow('bright', np.multiply(bright, 255))
 
@@ -141,18 +149,15 @@ if __name__ == '__main__':
             cx = (np.sum(prod) / count) + (values.shape[0] / 2)
             np.multiply(ycord, bright, prod)
             cy = (np.sum(prod) / count) + (values.shape[1] / 2)
+            
+            red = [0,0,255]
 
-            dot.fill(0)
-            dot[cx-1, cy-1] = 255
-            dot[cx, cy-1] = 255
-            dot[cx+1, cy-1] = 255
-            dot[cx-1, cy] = 255
-            dot[cx, cy] = 255
-            dot[cx+1, cy] = 255
-            dot[cx-1, cy+1] = 255
-            dot[cx, cy+1] = 255
-            dot[cx+1, cy+1] = 255
-            cv2.imshow('dot', dot)
+            #dot.fill(0)
+            overlaid[cx-1:cx+1,cy-1,:] = red
+            overlaid[cx-1:cx+1,cy,:] = red
+            overlaid[cx-1:cx+1,cy+1,:] = red
+            
+            cv2.imshow('overlay', overlaid)
 
         spheroStep(s, bright.shape[0] / 2, bright.shape[1] / 2, lastDirs, cx, cy, lastPositions)
             
