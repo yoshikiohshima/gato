@@ -8,6 +8,9 @@ import video
 
 import sphero
 
+import scipy.misc
+from skimage.draw import line_aa
+
 s = None
 
 lastDirs = [0]
@@ -48,9 +51,6 @@ def dir(newPos, oldPos):
    return wrap(rad * 180.0 / np.pi)
 
 def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
-    if not s:
-        return
-
     print 'step', tx, ty, lastDirs, dotx, doty, lastPositions
 
     if (abs(tx - dotx) < 50) and (abs(ty - doty) < 50):
@@ -58,7 +58,8 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
 
     if len(lastDirs) < 10:
         print 'early', lastDirs[-1]
-        s.roll(0x0F, lastDirs[-1])
+        if s:
+            s.roll(0x0F, lastDirs[-1])
         lastDirs.append(lastDirs[-1])
         lastPositions.append([dotx, doty])
         return
@@ -82,7 +83,8 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
         next = wrap(lastDirs[-1] - 10)
 
     print 'after', d, sd, cd, diff, next
-    s.roll(0x0F, next)
+    if s:
+        s.roll(0x0F, next)
     lastPositions.append([dotx, doty])
     lastDirs.append(next)
 
@@ -142,15 +144,22 @@ if __name__ == '__main__':
             cx = np.sum(prod) / count
             np.multiply(ycord, bright, prod)
             cy = np.sum(prod) / count
-            
+
+            spheroStep(s, bright.shape[0] / 2, bright.shape[1] / 2, lastDirs, cx, cy, lastPositions)
+
+            l = len(lastPositions)
+            sx, sy = lastPositions[0]
+            for i in range(l-1):
+                [dx, dy] = lastPositions[i+1]
+                rr, cc, val = line_aa(sx, sy, dx, dy)
+                overlaid[rr,cc,1] = val * (255 * i / l)
+                sx, sy = dx, dy
+
             overlaid[cx-1:cx+1,cy-1,:] = red
             overlaid[cx-1:cx+1,cy,:] = red
             overlaid[cx-1:cx+1,cy+1,:] = red
-            
             cv2.imshow('overlay', overlaid)
 
-        spheroStep(s, bright.shape[0] / 2, bright.shape[1] / 2, lastDirs, cx, cy, lastPositions)
-            
         ch = 0xFF & cv2.waitKey(1)
         if ch == 27:
             break
