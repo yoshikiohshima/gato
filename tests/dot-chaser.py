@@ -8,9 +8,6 @@ import video
 
 import sphero
 
-import scipy.misc
-from skimage.draw import line_aa
-
 s = None
 
 lastDirs = [0]
@@ -51,7 +48,7 @@ def dir(newPos, oldPos):
    return wrap(rad * 180.0 / np.pi)
 
 def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
-    print 'step', tx, ty, lastDirs, dotx, doty, lastPositions
+#    print 'step', tx, ty, lastDirs, dotx, doty, lastPositions
 
     if (abs(tx - dotx) < 50) and (abs(ty - doty) < 50):
         return
@@ -82,11 +79,11 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
     else:
         next = wrap(lastDirs[-1] - 10)
 
-    print 'after', d, sd, cd, diff, next
     if s:
         s.roll(0x0F, next)
     lastPositions.append([dotx, doty])
     lastDirs.append(next)
+    return cd, sd, d
 
 if __name__ == '__main__':
 
@@ -145,14 +142,19 @@ if __name__ == '__main__':
             np.multiply(ycord, bright, prod)
             cy = np.sum(prod) / count
 
-            spheroStep(s, bright.shape[0] / 2, bright.shape[1] / 2, lastDirs, cx, cy, lastPositions)
+            val = spheroStep(s, bright.shape[0] / 2, bright.shape[1] / 2, lastDirs, cx, cy, lastPositions)
 
+            if val:
+                (cd, sd, d) = val
+                cv2.putText(overlaid, 'dir in camera frame: ' + str(int(d)), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(overlaid, 'sphero dir: ' + str(int(sd)), (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(overlaid, 'dir to target: ' + str(int(cd)), (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+ 
             l = len(lastPositions)
             sx, sy = lastPositions[0]
             for i in range(l-1):
                 [dx, dy] = lastPositions[i+1]
-                rr, cc, val = line_aa(sx, sy, dx, dy)
-                overlaid[rr,cc,1] = val * (255 * i / l)
+                cv2.line(overlaid, (sy, sx), (dy, dx), (0, 0, (255*i/l)), 1)
                 sx, sy = dx, dy
 
             overlaid[cx-1:cx+1,cy-1,:] = red
