@@ -73,14 +73,22 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
     cd = dir([dotx, doty], [tx, ty])
     # the direction sphero needs to go in the camera frame
 
-    diff = d - cd
-    if (diff > 180):
-        next = wrap(lastDirs[-1] + 10)
-    else:
-        next = wrap(lastDirs[-1] - 10)
+    offset = d - sd
+    # sphero thinks it went toward sd, but it actually went toward d
+    # IOW, offset is how much off sphero's idea is.
+    # e.g., if sd is zero, sphero thinks it is moving toward its north,
+    # but it is actually moving toward d.
 
+    next = wrap(cd - offset)
+    # the new direction sphero should go in sphero's frame
+
+    if wrap(next - lastDirs[-1]) < 180:
+        next = wrap(lastDirs[-1] + 10)
+    if wrap(next - lastDirs[-1]) >= 180:
+        next = wrap(lastDirs[-1] - 10)
+    
     if s:
-        s.roll(0x0F, next)
+        s.roll(0x0F, int(next))
     lastPositions.append([dotx, doty])
     lastDirs.append(next)
     return cd, sd, d
