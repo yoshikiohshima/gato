@@ -110,6 +110,15 @@ def drawVec(image, dir, l, point, color):
     rad = degToRad(dir)
     cv2.line(image, point, (int(sx + l * np.cos(rad)), int(sy + l * np.sin(rad))), color, 3)
 
+targetX = 0
+targetY = 0
+
+def recordTarget(event, x, y, flags, param):
+    global targetX, targetY
+    if event == cv2.EVENT_LBUTTONDOWN:
+        targetX = y
+        targetY = x
+
 if __name__ == '__main__':
 
     try: fn = sys.argv[1]
@@ -139,7 +148,13 @@ if __name__ == '__main__':
     overlaid = np.zeros(small.shape, small.dtype)
     red = [0,0,255]
     cv2.imshow('hsv', values)
+
+    cv2.namedWindow("overlay")
+    cv2.setMouseCallback("overlay", recordTarget)
     cv2.imshow('overlay', overlaid)
+
+    targetX = bright.shape[0] / 2
+    targetY = bright.shape[1] / 2
 
     if doSphero:
         s = sphero.Sphero()
@@ -168,7 +183,7 @@ if __name__ == '__main__':
             np.multiply(ycord, bright, prod)
             cy = np.sum(prod) / count
 
-            val = spheroStep(s, bright.shape[0] / 2, bright.shape[1] / 2, lastDirs, cx, cy, lastPositions)
+            val = spheroStep(s, targetX, targetY, lastDirs, cx, cy, lastPositions)
 
             if val:
                 (cd, sd, d, next, offset) = val
