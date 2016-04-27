@@ -48,7 +48,6 @@ def dir(newPos, oldPos):
    return wrap(rad * 180.0 / np.pi)
 
 def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
-#    print 'step', tx, ty, lastDirs, dotx, doty, lastPositions
 
     samples = 5
 
@@ -70,7 +69,11 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
     d = dir(lastPositions[-1], lastPositions[0])
     # the direction sphero moved in last samples steps within the camera frame
 
-    sd = wrap(sum(lastDirs) / len(lastDirs))
+    x = y = 0
+    for angle in lastDirs:
+        x += np.cos(degToRad(angle))
+        y += np.sin(degToRad(angle))
+    sd = wrap(radToDeg(np.arctan2(y, x)))
     # the direction that sphero thinks it went in last samples frames
 
     cd = dir([tx, ty], [dotx, doty])
@@ -93,7 +96,7 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
     if s:
         s.roll(0x08, int(next))
     lastPositions.append([dotx, doty])
-    lastDirs.append(next)
+    lastDirs.append(int(next))
     return cd, sd, d, next, offset
 
 def degToRad(deg):
@@ -117,11 +120,6 @@ if __name__ == '__main__':
 
     doSphero = not noSphero
 
-    if doSphero:
-        s = sphero.Sphero()
-
-    connect()
-
 #    cam = cv2.VideoCapture(fn)
 #    By reading video.py, the line above should be equivalent to the line below;  but somehow it does not create a valid camera object
 
@@ -140,6 +138,12 @@ if __name__ == '__main__':
     prod = np.zeros(values.shape, np.int64)
     overlaid = np.zeros(small.shape, small.dtype)
     red = [0,0,255]
+    cv2.imshow('hsv', values)
+    cv2.imshow('overlay', overlaid)
+
+    if doSphero:
+        s = sphero.Sphero()
+    connect()
 
     while True:
         flag, frame = cam.read()
