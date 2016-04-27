@@ -50,13 +50,16 @@ def dir(newPos, oldPos):
 def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
 #    print 'step', tx, ty, lastDirs, dotx, doty, lastPositions
 
+    samples = 5
+
     if (abs(tx - dotx) < 50) and (abs(ty - doty) < 50):
+        s.roll(0x0, 0)
         return
 
-    if len(lastDirs) < 10:
+    if len(lastDirs) < samples:
         print 'early', lastDirs[-1]
         if s:
-            s.roll(0x0F, lastDirs[-1])
+            s.roll(0x08, lastDirs[-1])
         lastDirs.append(lastDirs[-1])
         lastPositions.append([dotx, doty])
         return
@@ -65,12 +68,12 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
     lastDirs.pop(0)
 
     d = dir(lastPositions[-1], lastPositions[0])
-    # the direction sphero moved in last 10 steps within the camera frame
+    # the direction sphero moved in last samples steps within the camera frame
 
     sd = wrap(sum(lastDirs) / len(lastDirs))
-    # the direction that sphero thinks it went in last 10 frames
+    # the direction that sphero thinks it went in last samples frames
 
-    cd = dir([dotx, doty], [tx, ty])
+    cd = dir([tx, ty], [dotx, doty])
     # the direction sphero needs to go in the camera frame
 
     offset = d - sd
@@ -88,10 +91,10 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
         next = wrap(lastDirs[-1] - 10)
     
     if s:
-        s.roll(0x0F, int(next))
+        s.roll(0x08, int(next))
     lastPositions.append([dotx, doty])
     lastDirs.append(next)
-    return cd, sd, d
+    return cd, sd, d, next, offset
 
 if __name__ == '__main__':
 
@@ -153,10 +156,12 @@ if __name__ == '__main__':
             val = spheroStep(s, bright.shape[0] / 2, bright.shape[1] / 2, lastDirs, cx, cy, lastPositions)
 
             if val:
-                (cd, sd, d) = val
+                (cd, sd, d, next, offset) = val
                 cv2.putText(overlaid, 'dir in camera frame: ' + str(int(d)), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 cv2.putText(overlaid, 'sphero dir: ' + str(int(sd)), (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 cv2.putText(overlaid, 'dir to target: ' + str(int(cd)), (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(overlaid, 'next: ' + str(int(next)), (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(overlaid, 'offset: ' + str(int(offset)), (10, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
  
             l = len(lastPositions)
             sx, sy = lastPositions[0]
@@ -168,7 +173,8 @@ if __name__ == '__main__':
             overlaid[cx-1:cx+1,cy-1,:] = red
             overlaid[cx-1:cx+1,cy,:] = red
             overlaid[cx-1:cx+1,cy+1,:] = red
-            cv2.imshow('overlay', overlaid)
+
+        cv2.imshow('overlay', overlaid)
 
         ch = 0xFF & cv2.waitKey(1)
         if ch == 27:
