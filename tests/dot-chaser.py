@@ -53,7 +53,7 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
     samples = 5
 
     if (abs(tx - dotx) < 50) and (abs(ty - doty) < 50):
-        s.roll(0x0, 0)
+        s.roll(0x0, lastDirs[-1])
         return
 
     if len(lastDirs) < samples:
@@ -95,6 +95,17 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
     lastPositions.append([dotx, doty])
     lastDirs.append(next)
     return cd, sd, d, next, offset
+
+def degToRad(deg):
+    return deg / 180.0 * np.pi
+
+def radToDeg(rad):
+    return rad * 180.0 / np.pi
+
+def drawVec(image, dir, l, point, color):
+    sx, sy = point
+    rad = degToRad(dir)
+    cv2.line(image, point, (int(sx + l * np.cos(rad)), int(sy + l * np.sin(rad))), color, 3)
 
 if __name__ == '__main__':
 
@@ -162,6 +173,16 @@ if __name__ == '__main__':
                 cv2.putText(overlaid, 'dir to target: ' + str(int(cd)), (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 cv2.putText(overlaid, 'next: ' + str(int(next)), (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 cv2.putText(overlaid, 'offset: ' + str(int(offset)), (10, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+                drawVec(overlaid, d, 20, (250, 20), (174, 139, 103))
+                drawVec(overlaid, sd, 20, (250, 50), (127, 109, 201))
+                drawVec(overlaid, cd, 20, (250, 80), (174, 133, 130))
+                drawVec(overlaid, next, 20, (250, 110), (158, 119, 175))
+
+                drawVec(overlaid, d, 20, (cy, cx), (174, 139, 103))
+                drawVec(overlaid, sd, 20, (cy, cx), (127, 109, 201))
+                drawVec(overlaid, cd, 20, (cy, cx), (174, 133, 130))
+                drawVec(overlaid, next, 20, (cy, cx), (158, 119, 175))
  
             l = len(lastPositions)
             sx, sy = lastPositions[0]
