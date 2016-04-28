@@ -47,11 +47,11 @@ def dir(newPos, oldPos):
    rad = np.arctan2(diffX, diffY)
    return wrap(rad * 180.0 / np.pi)
 
-def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
+def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions, threshold):
 
     samples = 5
 
-    if (abs(tx - dotx) < 50) and (abs(ty - doty) < 50):
+    if (abs(tx - dotx) < threshold) and (abs(ty - doty) < threshold):
         s.roll(0x0, lastDirs[-1])
         return
 
@@ -113,6 +113,8 @@ def drawVec(image, dir, l, point, color):
 targetX = 0
 targetY = 0
 
+smallSize = (320, 180)
+
 def recordTarget(event, x, y, flags, param):
     global targetX, targetY
     if event == cv2.EVENT_LBUTTONDOWN:
@@ -136,11 +138,12 @@ if __name__ == '__main__':
 
     flag, frame = cam.read()
 
-    small = cv2.pyrDown(frame)
+    small = cv2.resize(frame, smallSize, interpolation = cv2.INTER_LINEAR)
+
     hsv = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
     values = hsv[:,:,2]
 
-    # we are still creating new arrays for 'small' and 'values' in the loop.
+    # we are still creating a new array for 'values' in the loop.
 
     xcord, ycord = np.indices(values.shape)
     bright = np.zeros(values.shape, values.dtype)
@@ -165,7 +168,8 @@ if __name__ == '__main__':
     fps = 0
     while True:
         flag, frame = cam.read()
-        small = cv2.pyrDown(frame)
+        cv2.resize(frame, smallSize, small, interpolation = cv2.INTER_LINEAR)
+        #small = cv2.pyrDown(frame)
 
         cv2.cvtColor(small, cv2.COLOR_BGR2HSV, hsv)
         values = hsv[:,:,2]
@@ -186,7 +190,7 @@ if __name__ == '__main__':
             np.multiply(ycord, bright, prod)
             cy = np.sum(prod) / count
 
-            val = spheroStep(s, targetX, targetY, lastDirs, cx, cy, lastPositions)
+            val = spheroStep(s, targetX, targetY, lastDirs, cx, cy, lastPositions, smallSize[0]/20)
             if val:
                 (cd, sd, d, next, offset) = val
                 cv2.putText(overlaid, 'dir in camera frame: ' + str(int(d)), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
@@ -226,7 +230,7 @@ if __name__ == '__main__':
             frames = 0
             last = now
 
-        cv2.putText(overlaid, 'fps: ' + "{0:.2f}".format(fps), (10, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        cv2.putText(overlaid, "{0:.1f}".format(fps), (10, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         cv2.imshow('overlay', overlaid)
 
         ch = 0xFF & cv2.waitKey(1)
