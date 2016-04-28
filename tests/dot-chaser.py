@@ -58,7 +58,7 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions):
     if len(lastDirs) < samples:
         print 'early', lastDirs[-1]
         if s:
-            s.roll(0x08, lastDirs[-1])
+            pass #            s.roll(0x08, lastDirs[-1])
         lastDirs.append(lastDirs[-1])
         lastPositions.append([dotx, doty])
         return
