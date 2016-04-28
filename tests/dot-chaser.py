@@ -5,7 +5,7 @@ import cv2
 from time import clock
 import sys
 import video
-
+import datetime
 import sphero
 
 s = None
@@ -160,6 +160,9 @@ if __name__ == '__main__':
         s = sphero.Sphero()
     connect()
 
+    last = startTime = datetime.datetime.now()
+    frames = 0
+    fps = 0
     while True:
         flag, frame = cam.read()
         small = cv2.pyrDown(frame)
@@ -184,7 +187,6 @@ if __name__ == '__main__':
             cy = np.sum(prod) / count
 
             val = spheroStep(s, targetX, targetY, lastDirs, cx, cy, lastPositions)
-
             if val:
                 (cd, sd, d, next, offset) = val
                 cv2.putText(overlaid, 'dir in camera frame: ' + str(int(d)), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
@@ -214,9 +216,21 @@ if __name__ == '__main__':
             overlaid[cx-1:cx+1,cy,:] = red
             overlaid[cx-1:cx+1,cy+1,:] = red
 
+
+        frames += 1
+        now = datetime.datetime.now()
+        diff = now - last
+        if diff.seconds >= 1:
+            micro = float((diff.seconds * 1000000) + diff.microseconds) / 1000000.0
+            fps = (float(frames) / micro)
+            frames = 0
+            last = now
+
+        cv2.putText(overlaid, 'fps: ' + "{0:.2f}".format(fps), (10, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         cv2.imshow('overlay', overlaid)
 
         ch = 0xFF & cv2.waitKey(1)
         if ch == 27:
             break
+
     cv2.destroyAllWindows()
