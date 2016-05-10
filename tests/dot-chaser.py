@@ -58,7 +58,7 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions, threshold):
     if len(lastDirs) < samples:
         print 'early', lastDirs[-1]
         if s:
-            pass #            s.roll(0x08, lastDirs[-1])
+            s.roll(0x08, lastDirs[-1])
         lastDirs.append(lastDirs[-1])
         lastPositions.append([dotx, doty])
         return
@@ -113,7 +113,7 @@ def drawVec(image, dir, l, point, color):
 targetX = 0
 targetY = 0
 
-smallSize = (320, 180)
+smallSize = (640, 360)
 
 def recordTarget(event, x, y, flags, param):
     global targetX, targetY
@@ -190,7 +190,7 @@ if __name__ == '__main__':
             np.multiply(ycord, bright, prod)
             cy = np.sum(prod) / count
 
-            val = spheroStep(s, targetX, targetY, lastDirs, cx, cy, lastPositions, smallSize[0]/20)
+            val = spheroStep(s, targetX, targetY, lastDirs, cx, cy, lastPositions, smallSize[0]/15)
             if val:
                 (cd, sd, d, next, offset) = val
                 cv2.putText(overlaid, 'dir in camera frame: ' + str(int(d)), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
