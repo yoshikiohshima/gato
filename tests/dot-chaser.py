@@ -11,7 +11,8 @@ import sphero
 s = None
 
 lastDirs = [0]
-lastPositions = [[0, 0]]
+lastPositions = [(0, 0)]
+
 
 def connect():
     if not s:
@@ -29,17 +30,11 @@ def connect():
            (s.get_bluetooth_info().name, s.get_bluetooth_info().bta))
 
 def wrap(degrees):
-    if degrees >= 360:
-        return degrees - int(int(degrees) / 360) * 360
-    if degrees < 0:
-        return degrees + int(int(degrees) / 360) * -360
-    return degrees
+    return degrees % 360
 
 def dir(newPos, oldPos):
-   newX = newPos[0]
-   newY = newPos[1]
-   oldX = oldPos[0]
-   oldY = oldPos[1]
+   (newX, newY) = newPos
+   (oldX, oldY) = oldPos
 
    diffX = newX - oldX
    diffY = newY - oldY
@@ -47,7 +42,23 @@ def dir(newPos, oldPos):
    rad = np.arctan2(diffX, diffY)
    return wrap(rad * 180.0 / np.pi)
 
+def distance(p1, p2):
+   (newX, newY) = p1
+   (oldX, oldY) = p2
+
+   diffX = newX - oldX
+   diffY = newY - oldY
+
+   return np.sqrt((diffX * diffX) + (diffY * diffY))
+
+errors = []
+error = 0
+integral = 0
+derivative = 0
+
 def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions, threshold):
+
+    global error, errors, integral, derivative
 
     samples = 5
 
@@ -58,10 +69,25 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions, threshold):
     if len(lastDirs) < samples:
         print 'early', lastDirs[-1]
         if s:
-            s.roll(0x08, lastDirs[-1])
+            s.roll(0x0F, lastDirs[-1])
         lastDirs.append(lastDirs[-1])
-        lastPositions.append([dotx, doty])
+        lastPositions.append((dotx, doty))
         return
+
+    prevError = error
+    error = distance((tx, ty), (dotx, doty))
+    derivative = error - prevError
+    integral += error
+
+    errors.append(error)
+    if (len(errors) > 50):
+        errors.pop(0)
+
+    kP = 1
+    kI = 0
+    kD = 0
+
+    speed = error * kP + integral * kI + derivative * kD;
 
     lastPositions.pop(0)
     lastDirs.pop(0)
@@ -76,7 +102,7 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions, threshold):
     sd = wrap(radToDeg(np.arctan2(y, x)))
     # the direction that sphero thinks it went in last samples frames
 
-    cd = dir([tx, ty], [dotx, doty])
+    cd = dir((tx, ty), (dotx, doty))
     # the direction sphero needs to go in the camera frame
 
     offset = d - sd
@@ -94,10 +120,10 @@ def spheroStep(s, tx, ty, lastDirs, dotx, doty, lastPositions, threshold):
         next = wrap(lastDirs[-1] - 10)
     
     if s:
-        s.roll(0x08, int(next))
-    lastPositions.append([dotx, doty])
+        s.roll(0x0F, int(next))
+    lastPositions.append((dotx, doty))
     lastDirs.append(int(next))
-    return cd, sd, d, next, offset
+    return cd, sd, d, next, offset, speed
 
 def degToRad(deg):
     return deg / 180.0 * np.pi
@@ -120,6 +146,29 @@ def recordTarget(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         targetX = y
         targetY = x
+
+def drawSparkLine(image, values, r, point, height, lineColor, dotColor):
+    deltaX = 3
+    x, y = point
+
+    px, py = point
+    for value in values:
+        cx = px + deltaX
+        cy = y + height * (1 - scale(value, r))
+
+        cv2.line(image, (int(px), int(py)), (int(cx), int(cy)), lineColor, 1);
+
+        px = cx
+        py = cy
+
+    cv2.circle(image, (int(px),int(py)), 3, dotColor)
+
+def scale(value, r):
+    mx, mn = r
+    if (mx - mn > 0):
+        return (value - mn) / (mx - mn)
+    else:
+        return 0
 
 if __name__ == '__main__':
 
@@ -192,7 +241,7 @@ if __name__ == '__main__':
 
             val = spheroStep(s, targetX, targetY, lastDirs, cx, cy, lastPositions, smallSize[0]/15)
             if val:
-                (cd, sd, d, next, offset) = val
+                (cd, sd, d, next, offset, speed) = val
                 cv2.putText(overlaid, 'dir in camera frame: ' + str(int(d)), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 cv2.putText(overlaid, 'sphero dir: ' + str(int(sd)), (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 cv2.putText(overlaid, 'dir to target: ' + str(int(cd)), (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
@@ -208,11 +257,15 @@ if __name__ == '__main__':
                 drawVec(overlaid, sd, 20, (cy, cx), (127, 109, 201))
                 drawVec(overlaid, cd, 20, (cy, cx), (174, 133, 130))
                 drawVec(overlaid, next, 20, (cy, cx), (158, 119, 175))
- 
+
+                drawSparkLine(overlaid, errors, (300, 0),
+                              (10, 170), 40, (255, 255, 255), (0, 255, 0))
+                cv2.putText(overlaid, 'error: ' + str(int(error)), (100, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
             l = len(lastPositions)
             sx, sy = lastPositions[0]
             for i in range(l-1):
-                [dx, dy] = lastPositions[i+1]
+                (dx, dy) = lastPositions[i+1]
                 cv2.line(overlaid, (sy, sx), (dy, dx), (0, 0, (255*i/l)), 1)
                 sx, sy = dx, dy
 
